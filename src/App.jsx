@@ -1,6 +1,6 @@
 // Library
 import { useState } from 'react';
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useLazyQuery, useMutation } from '@apollo/client';
 
 // Assets
 import './App.css';
@@ -15,15 +15,15 @@ import Mutation from './services/apollo/mutation';
 
 const TodoList = () => {
   const [title, setTitle] = useState('');
-  const { loading: fetchLoading, error: fetchError, data, refetch } = useQuery(Query.getTodoList, {
-    notifyOnNetworkStatusChange: true,
-  });
+  const [searchInput, setSearchInput] = useState('');
+  const { loading: fetchLoading, error: fetchError, data } = useQuery(Query.getTodoList);
   const [addTodo, { error: addTodoError }] = useMutation(Mutation.addTodo, {
     refetchQueries: [
       Query.getTodoList,
       'GetTodoList'
     ],
   });
+  const [getTodoById, { loading: searchLoading, error: searchError, data: searchData }] = useLazyQuery(Query.getTodoById);
 
   const onChangeTitle = (e) => {
     if (e.target) {
@@ -35,7 +35,6 @@ const TodoList = () => {
     e.preventDefault();
     addTodo({ variables: { title } });
     setTitle('');
-    refetch();
   };
 
   const onClickItem = (id) => {
@@ -46,8 +45,21 @@ const TodoList = () => {
     
   };
 
-  if (fetchLoading) {
-    console.log(data)
+  const onChangeSearcInput = (e) => {
+    if (e.target.value) {
+      setSearchInput(e.target.value);
+    }
+  };
+
+  const onSearchList = (e) => {
+    e.preventDefault();
+    if(searchInput.trim() !== '') {
+      getTodoById({ variables: { id: searchInput }})
+      setSearchInput('');
+    }
+  };
+
+  if (fetchLoading || searchLoading) {
     return (
       <>
         <div className="loading-container">
@@ -59,8 +71,8 @@ const TodoList = () => {
     );
   }
 
-  if (fetchError || addTodoError) {
-    alert(fetchError.message || addTodoError.message)
+  if (fetchError || addTodoError || searchError) {
+    alert(fetchError.message || addTodoError.message || searchError);
   }
 
   return (
@@ -99,6 +111,33 @@ const TodoList = () => {
             className='js-todo-input'
           />
         </form>
+
+        <h1 className='app-title' style={{ marginTop: '2rem' }}>Get By Id</h1>
+
+        <form className='js-form' onSubmit={onSearchList}>
+          <input
+            onChange={onChangeSearcInput}
+            value={searchInput}
+            autoFocus
+            type='text'
+            aria-label='Enter id of todo item'
+            placeholder='E.g. 1'
+            className='js-todo-input'
+          />
+        </form>
+
+        <ul className='todo-list js-todo-list' style={{ marginTop: '1rem' }}>
+          {searchData?.result && (
+            <Todo
+              key={searchData.result.id}
+              id={searchData.result.id}
+              onClickItem={() => onClickItem(searchData.result.id)}
+              onDeleteItem={() => onDeleteItem(searchData.result.id)}
+              title={searchData.result.title}
+              completed={searchData.result.completed}
+            />
+          )}
+        </ul>
       </div>
 
       <svg>

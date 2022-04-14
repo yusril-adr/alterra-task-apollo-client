@@ -12,7 +12,7 @@ const Query = {
   `,
   getTodoById: gql `
     query GetTodoById ($id: Int = 1) {
-      todo: todos_todos_by_pk(id: $id) {
+      result: todos_todos_by_pk(id: $id) {
         id
         title
         completed
@@ -21,5 +21,4 @@ const Query = {
   `,
 };
 
-// eslint-disable-next-line import/no-anonymous-default-export
 export default Query;
